@@ -1,5 +1,5 @@
 import pymysql
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for,request
 from flask_bootstrap import Bootstrap5
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
@@ -37,7 +37,13 @@ cursor = db.cursor()
 #     "CREATE TABLE BlogPost(fid INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(250), subtitle VARCHAR(250), date VARCHAR(250), body VARCHAR(1000), author VARCHAR(250), img_url VARCHAR(250))")
 # db.commit()
 
-
+class PostForm(FlaskForm):
+    title = StringField(label="Blog Title", validators=[DataRequired(), ])
+    subtitle = StringField(label="Subtitle", validators=[DataRequired(), ])
+    author = StringField(label="Author Name", validators=[DataRequired(), ])
+    img_url = StringField(label="Image URL", validators=[DataRequired(), ])
+    content = CKEditorField("content")
+    submit = SubmitField(label="Submit Post")
 def insert_data(fid, title, subtitle, fdate, body, author, img_url):
     sql = "INSERT INTO BlogPost (fid, title, subtitle, date, body, author, img_url) VALUES (%s, %s, %s, %s, %s, %s, %s)"
     values = (fid, title, subtitle, date, body, author, img_url)
@@ -120,7 +126,9 @@ def show_post(post_id):
 # TODO: add_new_post() to create a new blog post
 @app.route("/new-post", methods=["POST", "GET"])
 def new_post():
-    return render_template("make-post.html")
+    form=PostForm()
+
+    return render_template("make-post.html",form=form)
 
 
 # TODO: edit_post() to change an existing blog post

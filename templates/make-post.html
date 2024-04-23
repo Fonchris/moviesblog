@@ -1,5 +1,5 @@
 {% block content %} {% include "header.html" %}
-
+{% from 'bootstrap5/form.html' import render_form%}
 <!-- Page Header -->
 <header
   class="masthead"
@@ -25,8 +25,18 @@
     <div class="row">
       <div class="col-lg-8 col-md-10 mx-auto">
         <!-- TODO:-Add CKEditor and render the form here -->
-<!--        {{ckeditor.load(custom_url=url_for('static',filename='ckeditor/ckeditor.js'))}}-->
-        {{ckeditor.load()}}
+
+<!--        <form method="post">-->
+<!--          {{form.title()}}-->
+<!--           {{form.subtitle()}}-->
+<!--           {{form.author()}}-->
+<!--           {{form.img_url()}}-->
+<!--           {{form.content()}}-->
+<!--           {{form.submit()}}-->
+<!--        </form>-->
+<!--        {{ ckeditor.load() }}-->
+<!--        {{ ckeditor.config(name='content') }}-->
+        {{render_form(form)}}
       </div>
     </div>
   </div>
