@@ -1,12 +1,13 @@
 import pymysql
-from flask import Flask, render_template, redirect, url_for,request
+from flask import Flask, render_template, redirect, url_for, request
 from flask_bootstrap import Bootstrap5
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired, URL
 from flask_ckeditor import CKEditor, CKEditorField
 from flask_ckeditor import CKEditor
-from datetime import date
+from datetime import date, datetime
+
 from password import password
 
 '''
@@ -44,6 +45,8 @@ class PostForm(FlaskForm):
     img_url = StringField(label="Image URL", validators=[DataRequired(), ])
     content = CKEditorField("content")
     submit = SubmitField(label="Submit Post")
+
+
 def insert_data(fid, title, subtitle, fdate, body, author, img_url):
     sql = "INSERT INTO BlogPost (fid, title, subtitle, date, body, author, img_url) VALUES (%s, %s, %s, %s, %s, %s, %s)"
     values = (fid, title, subtitle, date, body, author, img_url)
@@ -126,14 +129,62 @@ def show_post(post_id):
 # TODO: add_new_post() to create a new blog post
 @app.route("/new-post", methods=["POST", "GET"])
 def new_post():
-    form=PostForm()
+    form = PostForm()
+    if form.validate_on_submit():
+        title = form.title.data
+        subtitle = form.subtitle.data
+        author = form.author.data
+        img_url = form.img_url.data
+        content = form.content.data
+        datenow = date.today().strftime("%B %d, %Y")
 
-    return render_template("make-post.html",form=form)
+        cursorr = db.cursor()
+        sql = "INSERT INTO BlogPost (title, subtitle, date, body, author, img_url) VALUES (%s, %s, %s, %s, %s, %s)"
+        values = (title, subtitle, datenow, content, author, img_url)
+        cursor.execute(sql, values)
+        db.commit()
+        cursorr.close()
+        db.close()
+        return redirect(url_for("home"))
+
+    return render_template("make-post.html", form=form)
 
 
 # TODO: edit_post() to change an existing blog post
+@app.route('/edit-post/<int:post_id>', methods=["GET", "POST"])
+def edit_post(post_id):
+    form = PostForm()
+    if form.validate_on_submit():
+        title = form.title.data
+        subtitle = form.subtitle.data
+        author = form.author.data
+        img_url = form.img_url.data
+        content = form.content.data
+        datenow = date.today().strftime("%B %d, %Y")
+
+        cursorr = db.cursor()
+        sql = "UPDATE BlogPost SET subtitle = %s, date = %s, body = %s, author = %s, img_url = %s WHERE fid = %s"
+        values = (subtitle, datenow, content, author, img_url, {post_id})
+        cursor.execute(sql, values)
+        db.commit()
+        cursorr.close()
+        db.close()
+        return redirect(url_for("home"))
+
+    return render_template("make-post.html", form=form, is_edit=True)
+
 
 # TODO: delete_post() to remove a blog post from the database
+@app.route("/delete/<int:post_id>", methods=["GET", "POST"])
+def delete_post(post_id):
+    cursorr = db.cursor()
+    cursor.execute(f"DELETE FROM BlogPost WHERE fid = {post_id}")
+    db.commit()
+    cursorr.close()
+    db.close()
+    return redirect(url_for("home"))
+
+
 
 # Below is the code from previous lessons. No changes needed.
 @app.route("/about")
