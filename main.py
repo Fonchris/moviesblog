@@ -7,21 +7,15 @@ from wtforms.validators import DataRequired, URL
 from flask_ckeditor import CKEditor, CKEditorField
 from flask_ckeditor import CKEditor
 from datetime import date, datetime
+import pymysql
+from flask import Flask, render_template, request, url_for, redirect, flash, send_from_directory
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 
 from password import password
 
-'''
-Make sure the required packages are installed: 
-Open the Terminal in PyCharm (bottom left). 
-
-On Windows type:
-python -m pip install -r requirements.txt
-
-On MacOS type:
-pip3 install -r requirements.txt
-
-This will install the packages from the requirements.txt for this project.
-'''
+userdb = pymysql.connect(host="localhost", user="root", password=password, database="blogusers")
+usercursor = userdb.cursor()
 
 app = Flask(__name__)
 ckeditor = CKEditor(app)
@@ -32,11 +26,39 @@ Bootstrap5(app)
 db = pymysql.connect(host="localhost", user="root", password=password, database="updatedmovieblog")
 cursor = db.cursor()
 
+# Configure flask-login's login manager
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'  # Specify the login view
 
-# CONFIGURE TABLE
-# cursor.execute(
-#     "CREATE TABLE BlogPost(fid INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(250), subtitle VARCHAR(250), date VARCHAR(250), body VARCHAR(1000), author VARCHAR(250), img_url VARCHAR(250))")
-# db.commit()
+
+# Create a user_loader callback
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get_user(user_id)
+
+
+class User(UserMixin):
+    def __init__(self, id, email, password, name):
+        self.id = id
+        self.email = email
+        self.password = password
+        self.name = name
+
+    @staticmethod
+    def get_user(user_id):
+        usercursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        data = usercursor.fetchone()
+        if data:
+            return User(data[0], data[1], data[2], data[3])
+        return None
+
+    def get_id(self):
+        return str(self.id)
+
+
+# CONFIGURE TABLE cursor.execute( "CREATE TABLE BlogPost(fid INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(250),
+# subtitle VARCHAR(250), date VARCHAR(250), body VARCHAR(1000), author VARCHAR(250), img_url VARCHAR(250))") db.commit()
 
 class PostForm(FlaskForm):
     title = StringField(label="Blog Title", validators=[DataRequired(), ])
@@ -77,8 +99,6 @@ def insert_data(fid, title, subtitle, fdate, body, author, img_url):
 
 def get_all_posts():
     posts = []
-    db = pymysql.connect(host="localhost", user="root", password=password, database="updatedmovieblog")
-    cursor = db.cursor()
 
     try:
         query = "SELECT * FROM blogpost"
@@ -103,6 +123,7 @@ def get_all_posts():
 
 
 @app.route('/')
+@login_required
 def home():
     posts = get_all_posts()
     return render_template("index.html", all_posts=posts)
@@ -141,10 +162,11 @@ def new_post():
         cursorr = db.cursor()
         sql = "INSERT INTO BlogPost (title, subtitle, date, body, author, img_url) VALUES (%s, %s, %s, %s, %s, %s)"
         values = (title, subtitle, datenow, content, author, img_url)
-        cursor.execute(sql, values)
+        cursorr.execute(sql, values)
         db.commit()
         cursorr.close()
         db.close()
+        flash(f"{title} successfully added to books")
         return redirect(url_for("home"))
 
     return render_template("make-post.html", form=form)
@@ -185,7 +207,6 @@ def delete_post(post_id):
     return redirect(url_for("home"))
 
 
-
 # Below is the code from previous lessons. No changes needed.
 @app.route("/about")
 def about():
@@ -195,6 +216,69 @@ def about():
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
+
+
+@app.route('/register', methods=["POST", "GET"])
+def register():
+    if request.method == "POST":
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        # Hashing and salting the password entered by the user
+        hash_and_salted_password = generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
+        new_user = User(None, email, hash_and_salted_password, name)
+        # Storing the hashed password in our database
+        usercursor.execute("INSERT INTO users (email, password, name) VALUES (%s, %s, %s)",
+                           (new_user.email, new_user.password, new_user.name))
+        userdb.commit()
+        flash("You have been registered successfully!", "success")
+
+        # Log in and authenticate the user after adding details to the database
+        login_user(new_user)
+
+        # Redirect to the secrets page
+        return redirect(url_for("home"))
+
+    return render_template("register.html")
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('home'))
+
+
+@app.route('/login', methods=["POST", "GET"])
+def login():
+    login_status = False
+    if request.method == "POST":
+        email = request.form.get('email')
+        userpassword = request.form.get('password')
+        print(email)
+        print(password)
+        # Find user by email
+        usercursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user_data = usercursor.fetchone()
+
+        if user_data:
+            print(user_data)
+            stored_password = user_data[0]
+            print(f"DEBUG: User found with email {email}. Stored password hash: {stored_password}")
+            if check_password_hash(stored_password, userpassword):
+                # Load the user from the database
+                user = User(user_data[0], user_data[1], user_data[2], user_data[3])
+                login_user(user)
+                print(f"DEBUG: User {email} logged in successfully.")
+                login_status = True
+                return render_template("index.html")
+            else:
+                flash("Incorrect password. Please try again.")
+                print(f"DEBUG: Incorrect password for user {email}.")
+        else:
+            flash("Email not found. Please register first.")
+            print(f"DEBUG: Email {email} not found in the database.")
+
+    return render_template("login.html", loggged_in=login_status)
 
 
 if __name__ == "__main__":

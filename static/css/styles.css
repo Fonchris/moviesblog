@@ -10796,3 +10796,59 @@ header.masthead .post-heading .meta a {
     font-size: 2.25rem;
   }
 }
+
+}.max-w-400 {
+  max-width: 400px;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-control {
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+  font-size: 1.1rem;
+  padding: 0.75rem 1.5rem;
+  max-width: 200px;
+}
+
+.btn-primary:hover {
+  background-color: #0069d9;
+  border-color: #0062cc;
+}
+
+.d-flex.justify-content-center.align-items-center {
+  height: 100vh;
+}
+
+.card.shadow-sm.p-4.w-100.max-w-400 {
+  max-width: 400px;
+}
+
+
+.alert {
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.alert-success {
+  color: #fff;
+  background-color: #007bff; /* Change this to blue */
+  border-color: #007bff; /* Change this to blue */
+}
+
+.alert-error {
+  color: #a94442;
+  background-color: #f2dede;
+  border-color: #ebccd1;
